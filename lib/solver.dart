@@ -18,6 +18,7 @@ class Solver {
 }
 
 enum SolverLetterState {
+  none,
   confirmed,
   notInWord,
   tentative,

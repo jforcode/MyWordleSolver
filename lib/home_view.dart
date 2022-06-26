@@ -15,27 +15,30 @@ class HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Wordle Solver'),
-      ),
-      body: Column(
-        children: [
-          Row(
-            children: [
-              _getDropDown(),
-              _getRefreshButton(),
-            ],
-          ),
-          WordleView(selectedType)
-        ],
-      )
-    );
+        appBar: AppBar(
+          title: const Text('Wordle Solver'),
+        ),
+        body: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  _getDropDown(),
+                  _getRefreshButton(),
+                ],
+              ),
+            ),
+            WordleView(selectedType)
+          ],
+        ));
   }
 
   Widget _getRefreshButton() {
     return Container(
       width: 32,
       height: 32,
+      margin: const EdgeInsets.only(left: 16),
       alignment: Alignment.centerRight,
       child: IconButton(
         onPressed: () {},
@@ -45,20 +48,23 @@ class HomeViewState extends State<HomeView> {
   }
 
   Widget _getDropDown() {
-    return DropdownButton(
-      value: selectedType,
-      icon: const Icon(Icons.keyboard_arrow_down),
-      items: puzzleTypes.map((e) {
-        return DropdownMenuItem(
-          value: e,
-          child: Text("$e letter wordle"),
-        );
-      }).toList(),
-      onChanged: (int? selected) {
-        setState(() {
-          selectedType = selected ?? 5;
-        });
-      },
+    return Expanded(
+      child: DropdownButton(
+        value: selectedType,
+        icon: const Icon(Icons.keyboard_arrow_down),
+        isExpanded: true,
+        items: puzzleTypes.map((e) {
+          return DropdownMenuItem(
+            value: e,
+            child: Text("$e letter wordle"),
+          );
+        }).toList(),
+        onChanged: (int? selected) {
+          setState(() {
+            selectedType = selected ?? 5;
+          });
+        },
+      ),
     );
   }
 }

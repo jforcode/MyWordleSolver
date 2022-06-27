@@ -11,6 +11,13 @@ class HomeView extends StatefulWidget {
 class HomeViewState extends State<HomeView> {
   List<int> puzzleTypes = [5, 6, 7, 8, 9];
   int selectedType = 5;
+  late WordleView wordle;
+
+  @override
+  void initState() {
+    super.initState();
+    wordle = WordleView(selectedType, key: UniqueKey());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +36,7 @@ class HomeViewState extends State<HomeView> {
               ],
             ),
           ),
-          WordleView(selectedType)
+          wordle,
         ],
       ),
       resizeToAvoidBottomInset: false,
@@ -43,7 +50,11 @@ class HomeViewState extends State<HomeView> {
       margin: const EdgeInsets.only(left: 16),
       alignment: Alignment.centerRight,
       child: IconButton(
-        onPressed: () {},
+        onPressed: () {
+          setState(() {
+            wordle = WordleView(selectedType, key: UniqueKey());
+          });
+        },
         icon: const Icon(Icons.refresh),
       ),
     );
@@ -64,6 +75,7 @@ class HomeViewState extends State<HomeView> {
         onChanged: (int? selected) {
           setState(() {
             selectedType = selected ?? 5;
+            wordle = WordleView(selectedType, key: UniqueKey());
           });
         },
       ),

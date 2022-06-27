@@ -21,9 +21,11 @@ class WordleViewState extends State<WordleView> {
   WordData? currEditingWord;
   List<WordData> guessHistory = [];
   late Solver solver;
+  FocusNode wordFocusNode = FocusNode();
 
   @override
   void initState() {
+    print("init stzte");
     super.initState();
     solver = Solver(widget.numLetters);
   }
@@ -31,6 +33,7 @@ class WordleViewState extends State<WordleView> {
   @override
   void dispose() {
     wordTextCtrl.dispose();
+    wordFocusNode.dispose();
     super.dispose();
   }
 
@@ -60,6 +63,7 @@ class WordleViewState extends State<WordleView> {
             inputFormatters: <TextInputFormatter>[
               FilteringTextInputFormatter.allow(RegExp("[a-z]")),
             ],
+            focusNode: wordFocusNode,
             decoration: InputDecoration(
               suffixIcon: IconButton(
                 onPressed: _submitWord,
@@ -174,7 +178,17 @@ class WordleViewState extends State<WordleView> {
   }
 
   void _submitWord() {
+    if (wordFocusNode.hasFocus) {
+      wordFocusNode.unfocus();
+    }
+
     if (currEditingWord == null) {
+      var text = wordTextCtrl.text;
+      if (text.length < 5) {
+        _showSnackbar("Enter a 5 letter word!");
+        return;
+      }
+
       setState(() {
         currEditingWord = WordData.fromWord(wordTextCtrl.text);
         wordTextCtrl.text = "";

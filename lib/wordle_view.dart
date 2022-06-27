@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_wordle_solver/solver.dart';
+import 'package:my_wordle_solver/word_data.dart';
 import 'package:my_wordle_solver/word_view.dart';
 
 class WordleView extends StatefulWidget {
@@ -17,10 +20,12 @@ class WordleViewState extends State<WordleView> {
   TextEditingController wordTextCtrl = TextEditingController();
   WordData? currEditingWord;
   List<WordData> guessHistory = [];
+  late Solver solver;
 
   @override
   void initState() {
     super.initState();
+    solver = Solver(widget.numLetters);
   }
 
   @override
@@ -31,15 +36,18 @@ class WordleViewState extends State<WordleView> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          _getWordInputWidget(),
-          currEditingWord == null ? Container() : _getLettersInputWidget(),
-          guessHistory.isEmpty ? Container() : _getLettersHistoryWidget(),
-        ],
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _getWordInputWidget(),
+            guessHistory.isEmpty ? Container() : _getRecommendedWords(),
+            guessHistory.isEmpty ? Container() : _getLettersHistoryWidget(),
+            currEditingWord == null ? Container() : _getLettersInputWidget(),
+          ],
+        ),
       ),
     );
   }
@@ -59,7 +67,6 @@ class WordleViewState extends State<WordleView> {
               ),
               labelText: "Your guess!",
             ),
-            // textCapitalization: TextCapitalization.characters,
             controller: wordTextCtrl,
             maxLength: widget.numLetters,
           ),
@@ -77,16 +84,7 @@ class WordleViewState extends State<WordleView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                alignment: Alignment.centerLeft,
-                child: const Text(
-                  "Mark Letter State",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              _getTitleWidget("Mark Letter State"),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -94,12 +92,10 @@ class WordleViewState extends State<WordleView> {
                     onPressed: _discardEditing,
                     icon: const Icon(Icons.close),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(left: 16),
-                    child: IconButton(
-                      onPressed: _confirmEditing,
-                      icon: const Icon(Icons.check),
-                    ),
+                  Container(width: 16),
+                  IconButton(
+                    onPressed: _confirmEditing,
+                    icon: const Icon(Icons.check),
                   ),
                 ],
               )
@@ -118,28 +114,62 @@ class WordleViewState extends State<WordleView> {
   }
 
   Widget _getLettersHistoryWidget() {
-    var children = <Widget>[
-      Container(
-        margin: const EdgeInsets.only(top: 16),
-        child: Container(
-          alignment: Alignment.centerLeft,
-          child: const Text(
-            "Guess history",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    ];
-
+    var children = <Widget>[_getTitleWidget("Guess history")];
     children.addAll(
-        guessHistory.map((e) => WordView(wordData: e, shouldEdit: false)));
+      guessHistory.map((e) => WordView(wordData: e, shouldEdit: false)),
+    );
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: children,
+    );
+  }
+
+  Widget _getRecommendedWords() {
+    var toShow = min(solver.recommended.length, 10);
+    var remaining = solver.recommended.length - toShow;
+    var children = solver.recommended
+        .getRange(0, toShow)
+        .map((e) => Chip(label: Text(e)))
+        .toList();
+
+    if (remaining > 0) {
+      children.add(Chip(label: Text("+$remaining")));
+    }
+    if (toShow == 0) {
+      children.add(const Chip(label: Text("-")));
+    }
+
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.centerLeft,
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      child: Column(
+        children: [
+          _getTitleWidget("Matching words"),
+          Container(height: 8),
+          Wrap(
+            spacing: 8,
+            children: children,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getTitleWidget(String title) {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      child: Container(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 
@@ -150,13 +180,8 @@ class WordleViewState extends State<WordleView> {
         wordTextCtrl.text = "";
       });
     } else {
-      const snackBar = SnackBar(
-        content: Text(
-          "A word is already being edited. Discard or confirm editing to add a new word!",
-        ),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      _showSnackbar(
+          "A word is already being edited. Discard or confirm editing to add a new word!");
     }
   }
 
@@ -178,29 +203,19 @@ class WordleViewState extends State<WordleView> {
         "Currently editing word is null when submit is called! Should be an impossible scenario!",
       );
     }
-
-    setState(() {
-      guessHistory.insert(0, currEditingWord!);
-      currEditingWord = null;
-    });
-  }
-}
-
-class WordData {
-  String word = "";
-  List<SolverLetterState> letterStates = [];
-
-  WordData();
-
-  WordData.fromWord(this.word) {
-    letterStates.clear();
-    for (int i = 0; i < word.length; i++) {
-      letterStates.add(SolverLetterState.notInWord);
+    try {
+      solver.addWord(currEditingWord!);
+      setState(() {
+        guessHistory.add(currEditingWord!);
+        currEditingWord = null;
+      });
+    } catch (e) {
+      _showSnackbar(e.toString());
     }
   }
 
-  @override
-  String toString() {
-    return "$word : ${letterStates.join(", ")} ";
+  void _showSnackbar(String message) {
+    var snackBar = SnackBar(content: Text(message));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }

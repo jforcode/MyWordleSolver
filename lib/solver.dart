@@ -1,20 +1,204 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:my_wordle_solver/word_data.dart';
+
 class Solver {
   // this class handles the logic part
   final int numLetters;
   final List<String> recommended = [];
   final List<String> all = [];
 
+  // this is proper, it shouldn't be presentInWord
+  // as, the states can be present, not present, not tested for presence
+  List<SolverLetterState> letterStates = [];
+  List<PositionData> positionData = [];
+
   Solver(this.numLetters) {
-    // get word list for num letters
+    for (int i = 0; i < 26; i++) {
+      letterStates.add(SolverLetterState.none);
+    }
+    for (int i = 0; i < numLetters; i++) {
+      positionData.add(PositionData());
+    }
+
+    _initRecommended();
   }
 
-  // mark a letter at a particular position at a particular state
-  // if something is not present at all, send position as -1
-  // if there are conflicts, notify that there is a conflict, but still take the latest as true
-  // example can be notifying a is not present at 0, but then saying a is present at 0
-  // since it's a tool, people will just use this as undo.
-  // the exceptions thrown here are important.
-  void mark() {}
+  void _initRecommended() async {
+    var f = await rootBundle
+        .loadString("assets/words/words_common_$numLetters.txt");
+
+    f.split("\n").forEach((element) {
+      if (element.isNotEmpty) {
+        recommended.add(element);
+      }
+    });
+
+    print(recommended.length);
+  }
+
+  void addWord(WordData wordData) {
+    _updateLetterStates(wordData);
+    _updateRecommended();
+  }
+
+  void _updateRecommended() {
+    recommended.removeWhere((element) => _containsNotPresentLetter(element));
+    recommended
+        .removeWhere((element) => _containsLettersInInvalidPositions(element));
+    recommended.removeWhere((element) => _notContainsPresentLetter(element));
+    print("after removal ${recommended.join(", ")}");
+  }
+
+  bool _containsNotPresentLetter(String word) {
+    for (var x in word.characters) {
+      if (letterStates[_getIndexForChar(x)] == SolverLetterState.notInWord) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool _containsLettersInInvalidPositions(String word) {
+    for (int i = 0; i < numLetters; i++) {
+      var posData = positionData[i];
+      if (!_charEquals("-", posData.confirmedLetter) &&
+          !_charEquals(word[i], posData.confirmedLetter)) {
+        print("remvoing 1 $word");
+        return true;
+      }
+
+      if (posData.nonConfirmedLetters
+          .map((e) => e.toLowerCase())
+          .contains(word[i].toLowerCase())) {
+        print("remvoing 2 $word");
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool _notContainsPresentLetter(String word) {
+    for (int i = 0; i < letterStates.length; i++) {
+      if (letterStates[i] == SolverLetterState.tentative &&
+          !word.contains(_getCharForIndex(i))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  void _updateLetterStates(WordData wordData) {
+    if (wordData.word.length != numLetters) {
+      throw Exception(
+        "Solver is initialized with $numLetters letters. But given word is of ${wordData.word.length} letters",
+      );
+    }
+
+    for (int i = 0; i < numLetters; i++) {
+      var letter = wordData.word[i];
+      var state = wordData.letterStates[i];
+      var ind = _getIndexForChar(letter);
+
+      switch (state) {
+        case SolverLetterState.none:
+          break;
+
+        case SolverLetterState.confirmed:
+          _validateConfirmed(i, letter);
+          positionData[i].confirmedLetter = letter;
+          letterStates[ind] = SolverLetterState.confirmed;
+          break;
+
+        case SolverLetterState.notInWord:
+          _validateNotInWord(letter);
+          letterStates[ind] = SolverLetterState.notInWord;
+          break;
+
+        case SolverLetterState.tentative:
+          _validateTentative(i, letter);
+          if (!positionData[i].nonConfirmedLetters.contains(letter)) {
+            positionData[i].nonConfirmedLetters.add(letter);
+          }
+          if (letterStates[ind] != SolverLetterState.confirmed) {
+            letterStates[ind] = SolverLetterState.tentative;
+          }
+          break;
+      }
+    }
+  }
+
+  void _validateNotInWord(String letter) {
+    var currState = letterStates[_getIndexForChar(letter)];
+    if (currState == SolverLetterState.tentative ||
+        currState == SolverLetterState.confirmed) {
+      throw Exception(
+        "Invalid state! Letter $letter is already marked as present in word.",
+      );
+    }
+  }
+
+  void _validateConfirmed(int pos, String letter) {
+    if (letterStates[_getIndexForChar(letter)] == SolverLetterState.notInWord) {
+      throw Exception(
+        "Invalid state! Letter $letter is already marked as not present in word.",
+      );
+    }
+
+    var posData = positionData[pos];
+    for (var c in posData.nonConfirmedLetters) {
+      if (_charEquals(c, letter)) {
+        // already marked as non-confirmed
+        throw Exception(
+          "Invalid state! Letter $letter is already marked as not present at position ${pos + 1}",
+        );
+      }
+    }
+
+    if (!_charEquals(posData.confirmedLetter, "-") &&
+        !_charEquals(posData.confirmedLetter, letter)) {
+      // some other letter is already marked as confirmed
+      throw Exception(
+        "Invalid state! Letter ${posData.confirmedLetter} is already marked as confirmed at position ${pos + 1}.",
+      );
+    }
+  }
+
+  void _validateTentative(int pos, String letter) {
+    if (letterStates[_getIndexForChar(letter)] == SolverLetterState.notInWord) {
+      throw Exception(
+        "Invalid state! Letter $letter is already marked as not present in word.",
+      );
+    }
+
+    var posData = positionData[pos];
+    if (_charEquals(posData.confirmedLetter, letter)) {
+      // already marked as confirmed in this position
+      throw Exception(
+        "Invalid state! Letter $letter is already marked as confirmed at position ${pos + 1}",
+      );
+    }
+  }
+
+  String _getCharForIndex(int x) => String.fromCharCode("a".codeUnitAt(0) + x);
+
+  int _getIndexForChar(String x) =>
+      x == "-" ? -1 : (x.toLowerCase().codeUnitAt(0) - "a".codeUnitAt(0));
+
+  bool _charEquals(String x, String y) => x.toLowerCase() == y.toLowerCase();
+}
+
+class PositionData {
+  String confirmedLetter = "-";
+  List<String> nonConfirmedLetters = [];
+
+  @override
+  String toString() {
+    return "$confirmedLetter, ${nonConfirmedLetters.join(', ')}";
+  }
 }
 
 enum SolverLetterState {
@@ -24,6 +208,17 @@ enum SolverLetterState {
   tentative,
 }
 
-enum SolverExceptionTypes {
-  conflict, // expand more types of conflict maybe. exception should have other data
+extension SolverLetterStateExtension on SolverLetterState {
+  String get name {
+    switch (this) {
+      case SolverLetterState.none:
+        return "N/A";
+      case SolverLetterState.confirmed:
+        return "IN WORD AND IN THE SAME POSITION";
+      case SolverLetterState.notInWord:
+        return "NOT IN WORD";
+      case SolverLetterState.tentative:
+        return "IN WORD BUT IN A DIFFERENT POSITION";
+    }
+  }
 }

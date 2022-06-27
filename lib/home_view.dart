@@ -15,23 +15,25 @@ class HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Wordle Solver'),
-        ),
-        body: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _getDropDown(),
-                  _getRefreshButton(),
-                ],
-              ),
+      appBar: AppBar(
+        title: const Text('Wordle Solver'),
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _getDropDown(),
+                _getRefreshButton(),
+              ],
             ),
-            WordleView(selectedType)
-          ],
-        ));
+          ),
+          WordleView(selectedType)
+        ],
+      ),
+      resizeToAvoidBottomInset: false,
+    );
   }
 
   Widget _getRefreshButton() {

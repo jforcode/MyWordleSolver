@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_wordle_solver/letter_view.dart';
 import 'package:my_wordle_solver/solver.dart';
-import 'package:my_wordle_solver/wordle_view.dart';
+import 'package:my_wordle_solver/word_data.dart';
 
 class WordView extends StatefulWidget {
   const WordView({Key? key, required this.wordData, required this.shouldEdit})

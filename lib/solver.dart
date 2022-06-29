@@ -13,28 +13,29 @@ class Solver {
   List<SolverLetterState> letterStates = [];
   List<PositionData> positionData = [];
 
-  Solver(this.numLetters) {
+  static Future<Solver> create(int numLetters) async {
+    var solver = Solver._(numLetters);
+    await solver._initRecommended();
+    return solver;
+  }
+
+  Solver._(this.numLetters) {
     for (int i = 0; i < 26; i++) {
       letterStates.add(SolverLetterState.none);
     }
     for (int i = 0; i < numLetters; i++) {
       positionData.add(PositionData());
     }
-
-    _initRecommended();
   }
 
-  void _initRecommended() async {
-    var f = await rootBundle
-        .loadString("assets/words/words_common_$numLetters.txt");
+  Future<void> _initRecommended() async {
+    var f = await rootBundle.loadString("assets/words/words_$numLetters.txt");
 
     f.split("\n").forEach((element) {
       if (element.isNotEmpty) {
         recommended.add(element);
       }
     });
-
-    print(recommended.length);
   }
 
   void addWord(WordData wordData) {
@@ -43,13 +44,15 @@ class Solver {
   }
 
   void _updateRecommended() {
+    print("before removal ${recommended.length}");
+
     recommended.removeWhere((element) => _containsNotPresentLetter(element));
-    recommended
-        .removeWhere((element) => _containsLettersInInvalidPositions(element));
+    recommended.removeWhere((element) => _containsLettersInInvalidPositions(element));
     recommended.removeWhere((element) => _notContainsPresentLetter(element));
-    print("after removal ${recommended.join(", ")}");
+    print("after removal ${recommended.length}");
   }
 
+  int ii = 0;
   bool _containsNotPresentLetter(String word) {
     for (var x in word.characters) {
       if (letterStates[_getIndexForChar(x)] == SolverLetterState.notInWord) {
@@ -65,14 +68,12 @@ class Solver {
       var posData = positionData[i];
       if (!_charEquals("-", posData.confirmedLetter) &&
           !_charEquals(word[i], posData.confirmedLetter)) {
-        print("remvoing 1 $word");
+        print("removing $word ${ii++}");
         return true;
       }
 
-      if (posData.nonConfirmedLetters
-          .map((e) => e.toLowerCase())
-          .contains(word[i].toLowerCase())) {
-        print("remvoing 2 $word");
+      if (posData.nonConfirmedLetters.map((e) => e.toUpperCase()).contains(word[i].toUpperCase())) {
+        print("removing $word ${ii++}");
         return true;
       }
     }
@@ -82,8 +83,7 @@ class Solver {
 
   bool _notContainsPresentLetter(String word) {
     for (int i = 0; i < letterStates.length; i++) {
-      if (letterStates[i] == SolverLetterState.tentative &&
-          !word.contains(_getCharForIndex(i))) {
+      if (letterStates[i] == SolverLetterState.tentative && !word.contains(_getCharForIndex(i))) {
         return true;
       }
     }
@@ -133,8 +133,7 @@ class Solver {
 
   void _validateNotInWord(String letter) {
     var currState = letterStates[_getIndexForChar(letter)];
-    if (currState == SolverLetterState.tentative ||
-        currState == SolverLetterState.confirmed) {
+    if (currState == SolverLetterState.tentative || currState == SolverLetterState.confirmed) {
       throw Exception(
         "Invalid state! Letter $letter is already marked as present in word.",
       );
@@ -183,12 +182,12 @@ class Solver {
     }
   }
 
-  String _getCharForIndex(int x) => String.fromCharCode("a".codeUnitAt(0) + x);
+  String _getCharForIndex(int x) => String.fromCharCode("A".codeUnitAt(0) + x);
 
   int _getIndexForChar(String x) =>
-      x == "-" ? -1 : (x.toLowerCase().codeUnitAt(0) - "a".codeUnitAt(0));
+      x == "-" ? -1 : (x.toUpperCase().codeUnitAt(0) - "A".codeUnitAt(0));
 
-  bool _charEquals(String x, String y) => x.toLowerCase() == y.toLowerCase();
+  bool _charEquals(String x, String y) => x.toUpperCase() == y.toUpperCase();
 }
 
 class PositionData {

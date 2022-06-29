@@ -9,7 +9,7 @@ class HomeView extends StatefulWidget {
 }
 
 class HomeViewState extends State<HomeView> {
-  List<int> puzzleTypes = [5, 6, 7, 8, 9];
+  List<int> puzzleTypes = [4, 5, 6, 7, 8, 9];
   int selectedType = 5;
   late WordleView wordle;
 

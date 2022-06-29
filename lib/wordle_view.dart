@@ -20,14 +20,18 @@ class WordleViewState extends State<WordleView> {
   TextEditingController wordTextCtrl = TextEditingController();
   WordData? currEditingWord;
   List<WordData> guessHistory = [];
-  late Solver solver;
+  Solver? solver;
   FocusNode wordFocusNode = FocusNode();
 
   @override
   void initState() {
-    print("init stzte");
     super.initState();
-    solver = Solver(widget.numLetters);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _postBuild());
+  }
+
+  void _postBuild() async {
+    solver = await Solver.create(widget.numLetters);
+    setState(() {});
   }
 
   @override
@@ -42,15 +46,17 @@ class WordleViewState extends State<WordleView> {
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            _getWordInputWidget(),
-            guessHistory.isEmpty ? Container() : _getRecommendedWords(),
-            guessHistory.isEmpty ? Container() : _getLettersHistoryWidget(),
-            currEditingWord == null ? Container() : _getLettersInputWidget(),
-          ],
-        ),
+        child: solver == null
+            ? const CircularProgressIndicator()
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  _getWordInputWidget(),
+                  guessHistory.isEmpty ? Container() : _getRecommendedWords(),
+                  currEditingWord == null ? Container() : _getLettersInputWidget(),
+                  guessHistory.isEmpty ? Container() : _getLettersHistoryWidget(),
+                ],
+              ),
       ),
     );
   }
@@ -61,7 +67,13 @@ class WordleViewState extends State<WordleView> {
         Expanded(
           child: TextFormField(
             inputFormatters: <TextInputFormatter>[
-              FilteringTextInputFormatter.allow(RegExp("[a-z]")),
+              FilteringTextInputFormatter.allow(RegExp("[a-zA-Z]")),
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                return TextEditingValue(
+                  text: newValue.text.toUpperCase(),
+                  selection: newValue.selection,
+                );
+              }),
             ],
             focusNode: wordFocusNode,
             decoration: InputDecoration(
@@ -130,18 +142,33 @@ class WordleViewState extends State<WordleView> {
   }
 
   Widget _getRecommendedWords() {
-    var toShow = min(solver.recommended.length, 10);
-    var remaining = solver.recommended.length - toShow;
-    var children = solver.recommended
+    var toShow = min(solver!.recommended.length, 10);
+    var remaining = solver!.recommended.length - toShow;
+    var children = solver!.recommended
         .getRange(0, toShow)
-        .map((e) => Chip(label: Text(e)))
+        .map(
+          (e) => Chip(
+            label: Text(e),
+            deleteIcon: const Icon(Icons.add_circle, size: 20),
+            onDeleted: () {
+              if (currEditingWord == null) {
+                wordTextCtrl.text = e;
+                _submitWord();
+              } else {
+                _showSnackbar(
+                  "A word is already being edited! Discard or confirm editing to add a new word!",
+                );
+              }
+            },
+          ),
+        )
         .toList();
 
     if (remaining > 0) {
       children.add(Chip(label: Text("+$remaining")));
     }
     if (toShow == 0) {
-      children.add(const Chip(label: Text("-")));
+      children.add(const Chip(label: Text("no matching words")));
     }
 
     return Container(
@@ -153,6 +180,7 @@ class WordleViewState extends State<WordleView> {
           _getTitleWidget("Matching words"),
           Container(height: 8),
           Wrap(
+            alignment: WrapAlignment.center,
             spacing: 8,
             children: children,
           ),
@@ -218,7 +246,7 @@ class WordleViewState extends State<WordleView> {
       );
     }
     try {
-      solver.addWord(currEditingWord!);
+      solver!.addWord(currEditingWord!);
       setState(() {
         guessHistory.add(currEditingWord!);
         currEditingWord = null;

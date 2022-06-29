@@ -25,14 +25,19 @@ class WordViewState extends State<WordView> {
   Widget build(BuildContext context) {
     var children = <Widget>[];
     var len = widget.wordData.word.length;
+    var wholeWidth = MediaQuery.of(context).size.width * 0.8;
+    double width = (len >= 7) ? wholeWidth / len : 50;
+
+    print("Whole: $wholeWidth Width: $width");
 
     for (int i = 0; i < len; i++) {
       var letter = widget.wordData.word[i];
       var state = widget.wordData.letterStates[i];
 
-      children.add(SizedBox(
-        width: 50,
-        height: 50,
+      children.add(Container(
+        margin: const EdgeInsets.only(left: 8),
+        width: width,
+        height: width,
         child: InkWell(
           onTap: () {
             _onTap(i);
@@ -49,7 +54,7 @@ class WordViewState extends State<WordView> {
       width: double.infinity,
       margin: const EdgeInsets.only(top: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: children,
       ),
     );

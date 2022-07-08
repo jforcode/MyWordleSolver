@@ -25,19 +25,22 @@ class HomeViewState extends State<HomeView> {
       appBar: AppBar(
         title: const Text('Wordle Solver'),
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _getDropDown(),
-                _getRefreshButton(),
-              ],
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  _getDropDown(),
+                  _getRefreshButton(),
+                ],
+              ),
             ),
-          ),
-          wordle,
-        ],
+            wordle,
+          ],
+        ),
       ),
       resizeToAvoidBottomInset: false,
     );

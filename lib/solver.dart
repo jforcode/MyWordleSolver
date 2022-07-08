@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_wordle_solver/word_data.dart';
 
+// TODO: getRecommendedWord - which analyses all remaining words and gives one with highest probability
+// plus it checks which word can eliminate most amount of remaining words
+// TODO: make solver as a package.
+// if I make a bot, it can use this solver package
 class Solver {
   // this class handles the logic part
   final int numLetters;

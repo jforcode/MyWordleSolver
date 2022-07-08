@@ -43,21 +43,19 @@ class WordleViewState extends State<WordleView> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: solver == null
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  _getWordInputWidget(),
-                  guessHistory.isEmpty ? Container() : _getRecommendedWords(),
-                  currEditingWord == null ? Container() : _getLettersInputWidget(),
-                  guessHistory.isEmpty ? Container() : _getLettersHistoryWidget(),
-                ],
-              ),
-      ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: solver == null
+          ? const CircularProgressIndicator()
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                _getWordInputWidget(),
+                guessHistory.isEmpty ? Container() : _getRecommendedWords(),
+                currEditingWord == null ? Container() : _getLettersInputWidget(),
+                guessHistory.isEmpty ? Container() : _getLettersHistoryWidget(),
+              ],
+            ),
     );
   }
 
@@ -212,7 +210,7 @@ class WordleViewState extends State<WordleView> {
 
     if (currEditingWord == null) {
       var text = wordTextCtrl.text;
-      if (text.length < 5) {
+      if (text.length < widget.numLetters) {
         _showSnackbar("Enter a 5 letter word!");
         return;
       }
